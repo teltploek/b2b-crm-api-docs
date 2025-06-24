@@ -8,8 +8,8 @@ interface EndpointExample {
   path: string;
   description: string;
   queryParams?: Record<string, string>;
-  requestBody?: any;
-  responseBody: any;
+  requestBody?: unknown;
+  responseBody: unknown;
 }
 
 interface EndpointSection {
@@ -467,7 +467,7 @@ export default function EndpointsSection() {
                             </div>
                           )}
 
-                          {endpoint.requestBody && (
+                          {endpoint.requestBody !== undefined && (
                             <div>
                               <h5 className="text-sm font-semibold text-gray-700 mb-2">
                                 Request Body
