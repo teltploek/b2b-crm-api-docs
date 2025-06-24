@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# B2B CRM API Documentation
+
+This is a documentation site for the B2B CRM Dashboard API endpoints. It serves as a communication tool between frontend and backend developers to align on API structure and payloads.
 
 ## Getting Started
 
@@ -31,6 +33,22 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Setting up Subdomain Deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+To deploy this documentation on a subdomain (e.g., `docs.yourdomain.com`):
+
+1. **Deploy to Vercel:**
+   - Push this `api-docs` directory to your repository
+   - In Vercel, create a new project and import this repository
+   - Set the root directory to `api-docs` during import
+
+2. **Configure the Subdomain:**
+   - Go to your project settings in Vercel
+   - Navigate to "Domains" section
+   - Add your subdomain (e.g., `docs.yourdomain.com`)
+   - Follow Vercel's instructions to configure DNS
+
+3. **Environment Variables (if needed):**
+   - No environment variables are required for this static documentation
+
+The documentation will automatically rebuild and deploy when you push changes to the repository.
