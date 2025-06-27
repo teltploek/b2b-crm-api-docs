@@ -40,6 +40,15 @@ export default function IntroSection() {
             </p>
           </div>
           
+          <div className="bg-blue-50 border border-blue-200 rounded p-4 my-4">
+            <h4 className="font-semibold text-blue-800 mb-2">🆕 Nyt: Kundetype Filter</h4>
+            <p className="text-blue-700 text-sm">
+              Der er nu implementeret et globalt kundetype filter i navigationen, som gør det muligt at filtrere 
+              mellem &quot;B2B Promotion Customer&quot; og &quot;B2B Sport Customer&quot;. Filtreringen sker på frontend-siden, 
+              så der er ingen ændringer påkrævet i API&apos;et - kundedata skal blot inkludere kundetype information.
+            </p>
+          </div>
+          
           <p>
             Nedenfor finder I forslag til endpoints organiseret efter funktionsområde. 
             Hver sektion indeholder:
