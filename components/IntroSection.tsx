@@ -31,6 +31,15 @@ export default function IntroSection() {
             </li>
           </ul>
           
+          <div className="bg-green-50 border border-green-200 rounded p-4 my-4">
+            <h4 className="font-semibold text-green-800 mb-2">🆕 Nyt: Drag & Drop Funktionalitet</h4>
+            <p className="text-green-700 text-sm">
+              Frontend drag-and-drop systemet er nu implementeret og klar! Se især 
+              <code className="bg-green-100 px-1 rounded">PUT /api/requests/{requestId}/status</code> 
+              endpointet under "Requests" sektionen for at muliggøre status opdateringer via drag-and-drop i dashboardet.
+            </p>
+          </div>
+          
           <p>
             Nedenfor finder I forslag til endpoints organiseret efter funktionsområde. 
             Hver sektion indeholder:
@@ -40,6 +49,7 @@ export default function IntroSection() {
             <li>Forslag til endpoint URL</li>
             <li>Eksempel på request (hvor relevant)</li>
             <li>Eksempel på response baseret på nuværende mockdata</li>
+            <li><strong>Nye endpoints for interaktive funktioner</strong> (som drag & drop)</li>
           </ul>
         </div>
       </div>

@@ -167,6 +167,25 @@ const endpointSections: EndpointSection[] = [
           },
         },
       },
+      {
+        method: "PUT",
+        path: "/api/requests/{requestId}/status",
+        description: "Update request status (for drag and drop functionality)",
+        requestBody: {
+          newStatus: "Sample",
+          oldStatus: "Request",
+          updatedBy: "user_id",
+          timestamp: "2025-06-27T10:30:00Z"
+        },
+        responseBody: {
+          success: true,
+          requestId: "REQ3042",
+          previousStatus: "Request",
+          newStatus: "Sample",
+          updatedAt: "2025-06-27T10:30:00Z",
+          updatedBy: "user_id"
+        }
+      },
     ],
   },
   {
