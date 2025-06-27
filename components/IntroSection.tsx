@@ -35,8 +35,8 @@ export default function IntroSection() {
             <h4 className="font-semibold text-green-800 mb-2">🆕 Nyt: Drag & Drop Funktionalitet</h4>
             <p className="text-green-700 text-sm">
               Frontend drag-and-drop systemet er nu implementeret og klar! Se især 
-              <code className="bg-green-100 px-1 rounded">PUT /api/requests/{requestId}/status</code> 
-              endpointet under "Requests" sektionen for at muliggøre status opdateringer via drag-and-drop i dashboardet.
+              <code className="bg-green-100 px-1 rounded">PUT /api/requests/{'{requestId}'}/status</code> 
+              endpointet under &quot;Requests&quot; sektionen for at muliggøre status opdateringer via drag-and-drop i dashboardet.
             </p>
           </div>
           
