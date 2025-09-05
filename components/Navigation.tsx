@@ -9,7 +9,7 @@ export default function Navigation() {
             </h1>
           </div>
           <div className="text-sm text-gray-500">
-            Version 1.0 (Draft)
+            Version 1.3
           </div>
         </div>
       </div>

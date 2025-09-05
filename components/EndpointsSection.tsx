@@ -7,6 +7,7 @@ interface EndpointExample {
   method: string;
   path: string;
   description: string;
+  why?: string;
   queryParams?: Record<string, string>;
   requestBody?: unknown;
   responseBody: unknown;
@@ -19,14 +20,766 @@ interface EndpointSection {
 }
 
 const endpointSections: EndpointSection[] = [
+  // ============ September 2025 - New Modules ============
+  {
+    title: "Authentication",
+    description: "Brugerautentificering og sessionshåndtering - Integration med eksisterende AspNetUsers tabel fra master system",
+    endpoints: [
+      {
+        method: "POST",
+        path: "/api/auth/login",
+        description: "Autentificer bruger mod eksisterende AspNetUsers tabel. Verificerer bruger mod master system og returnerer JWT tokens med dashboard-specifikke features og rettigheder. Systemet bygger videre på brugerne i master systemet.",
+        requestBody: {
+          username: "casper",  // UserName from AspNetUsers
+          password: "admin123"  // Validated against PasswordHash in AspNetUsers
+        },
+        responseBody: {
+          success: true,
+          user: {
+            id: "550e8400-e29b-41d4-a716-446655440000",  // NVARCHAR(450) - Id from AspNetUsers master table
+            username: "casper",  // UserName from AspNetUsers
+            email: "casper@b2bpromotion.dk",  // Email from AspNetUsers
+            employee: {  // Extended info from employees table linked via email
+              id: 6,
+              name: "Casper Andersen",
+              role: "manager",
+              department: "Sales"
+            },
+            dashboardFeatures: ["sales", "orders", "finance", "hr", "admin"],  // Dashboard-specific features from user_features table
+            settings: {  // User-specific dashboard settings
+              language: "da",
+              theme: "light",
+              notifications: true
+            }
+          },
+          tokens: {
+            accessToken: "eyJhbGciOiJIUzI1NiIs...",
+            refreshToken: "eyJhbGciOiJIUzI1NiIs...",
+            expiresIn: 3600
+          }
+        }
+      },
+      {
+        method: "POST",
+        path: "/api/auth/refresh",
+        description: "Forny adgangstoken ved brug af refresh token. Forlænger brugerens session uden at kræve nyt login mod master systemet. Refresh tokens gemmes i dashboard database for at undgå at påvirke master systemet.",
+        requestBody: {
+          refreshToken: "eyJhbGciOiJIUzI1NiIs..."
+        },
+        responseBody: {
+          success: true,
+          tokens: {
+            accessToken: "eyJhbGciOiJIUzI1NiIs...",
+            expiresIn: 3600
+          }
+        }
+      },
+      {
+        method: "POST",
+        path: "/api/auth/logout",
+        description: "Log bruger ud og invalider tokens. Sikrer korrekt udlogning og invalidering af tokens for at forhindre uautoriseret adgang.",
+        requestBody: {
+          refreshToken: "eyJhbGciOiJIUzI1NiIs..."
+        },
+        responseBody: {
+          success: true,
+          message: "Logged out successfully"
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/auth/user/{userId}/features",
+        description: "Hent dashboard-specifikke features for en eksisterende bruger fra master systemet. Features gemmes i dashboard database og kobles til AspNetUsers via bruger ID.",
+        responseBody: {
+          success: true,
+          data: {
+            userId: "550e8400-e29b-41d4-a716-446655440000",  // NVARCHAR(450) - References AspNetUsers.Id
+            features: ["sales", "orders", "finance", "hr", "admin"],
+            grantedBy: "admin-001",
+            grantedAt: "2025-01-15T10:00:00Z"
+          }
+        }
+      },
+      {
+        method: "PUT",
+        path: "/api/auth/user/{userId}/features",
+        description: "Opdater hvilke dashboard moduler en eksisterende bruger har adgang til. Dette påvirker IKKE brugerens rettigheder i master systemet.",
+        requestBody: {
+          features: ["sales", "orders", "finance"]  // Remove hr and admin access
+        },
+        responseBody: {
+          success: true,
+          message: "User features updated successfully"
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/auth/user/{userId}/settings",
+        description: "Hent brugerspecifikke dashboard indstillinger som sprog, tema og notifikationer. Disse settings eksisterer kun i dashboard systemet.",
+        responseBody: {
+          success: true,
+          data: {
+            userId: "550e8400-e29b-41d4-a716-446655440000",
+            settings: {
+              language: "da",
+              theme: "light",
+              notifications: true,
+              defaultView: "sales",
+              itemsPerPage: 25
+            }
+          }
+        }
+      },
+      {
+        method: "PUT",
+        path: "/api/auth/user/{userId}/settings",
+        description: "Opdater brugerens personlige præferencer for dashboard visning. Disse indstillinger påvirker kun CRM dashboard, ikke master systemet.",
+        requestBody: {
+          language: "en",
+          theme: "dark",
+          notifications: false
+        },
+        responseBody: {
+          success: true,
+          message: "Settings updated successfully"
+        }
+      }
+    ],
+  },
+  {
+    title: "HR Module - Locations",
+    description: "Kontor- og placeringshåndtering",
+    endpoints: [
+      {
+        method: "GET",
+        path: "/api/hr/locations",
+        description: "Hent alle kontorplaceringer. Centraliserer håndtering af kontorplaceringer, så systemet kan skalere til flere kontorer uden hardkodning.",
+        queryParams: {
+          isActive: "Filter by active status (true/false)",
+          type: "Filter by location type (office/remote/external)"
+        },
+        responseBody: {
+          success: true,
+          data: [
+            {
+              id: 1,
+              name: "Rødovre",
+              type: "office",
+              address: "Islevdalvej 142",
+              city: "Rødovre",
+              postalCode: "2610",
+              country: "Denmark",
+              isActive: true,
+              createdAt: "2025-01-01T00:00:00Z"
+            },
+            {
+              id: 2,
+              name: "Ribe",
+              type: "office",
+              address: "Industrivej 10",
+              city: "Ribe",
+              postalCode: "6760",
+              country: "Denmark",
+              isActive: true,
+              createdAt: "2025-01-01T00:00:00Z"
+            },
+            {
+              id: 3,
+              name: "Hjemmefra",
+              type: "remote",
+              isActive: true,
+              createdAt: "2025-01-01T00:00:00Z"
+            }
+          ]
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/hr/locations/{locationId}",
+        description: "Hent detaljeret information om et kontor, inklusiv faciliteter og antal medarbejdere.",
+        responseBody: {
+          success: true,
+          data: {
+            id: 1,
+            name: "Rødovre",
+            type: "office",
+            address: "Islevdalvej 142",
+            city: "Rødovre",
+            postalCode: "2610",
+            country: "Denmark",
+            isActive: true,
+            employeeCount: 12,
+            facilities: ["parking", "canteen", "meeting_rooms"],
+            createdAt: "2025-01-01T00:00:00Z",
+            updatedAt: "2025-09-01T10:00:00Z"
+          }
+        }
+      },
+      {
+        method: "POST",
+        path: "/api/hr/locations",
+        description: "Opret ny placering. Gør det muligt at tilføje nye kontorer eller arbejdssteder efterhånden som virksomheden vokser.",
+        requestBody: {
+          name: "Copenhagen",
+          type: "office",
+          address: "Østergade 123",
+          city: "Copenhagen",
+          postalCode: "1100",
+          country: "Denmark"
+        },
+        responseBody: {
+          success: true,
+          data: {
+            id: 4,
+            name: "Copenhagen",
+            type: "office",
+            address: "Østergade 123",
+            city: "Copenhagen",
+            postalCode: "1100",
+            country: "Denmark",
+            isActive: true,
+            createdAt: "2025-09-05T10:00:00Z"
+          }
+        }
+      },
+      {
+        method: "PUT",
+        path: "/api/hr/locations/{locationId}",
+        description: "Opdater placeringsdetaljer",
+        requestBody: {
+          address: "Islevdalvej 144",
+          facilities: ["parking", "canteen", "meeting_rooms", "gym"]
+        },
+        responseBody: {
+          success: true,
+          data: {
+            id: 1,
+            name: "Rødovre",
+            type: "office",
+            address: "Islevdalvej 144",
+            city: "Rødovre",
+            postalCode: "2610",
+            country: "Denmark",
+            isActive: true,
+            facilities: ["parking", "canteen", "meeting_rooms", "gym"],
+            updatedAt: "2025-09-05T10:00:00Z"
+          }
+        }
+      },
+      {
+        method: "DELETE",
+        path: "/api/hr/locations/{locationId}",
+        description: "Deaktiver placering (blød sletning)",
+        responseBody: {
+          success: true,
+          message: "Location deactivated successfully"
+        }
+      }
+    ],
+  },
+  {
+    title: "HR Module - Employees", 
+    description: "Medarbejderhåndtering og information",
+    endpoints: [
+      {
+        method: "GET",
+        path: "/api/hr/employees",
+        description: "Hent alle medarbejdere med valgfri filtrering. Dashboardet skal kunne vise medarbejderlister og filtrere efter afdeling, rolle eller ansættelsestype.",
+        queryParams: {
+          isActive: "Filter by active status (true/false)",
+          type: "Filter by employment type (fulltime/parttime/hourly)",
+          role: "Filter by role (employee/manager)",
+          department: "Filter by department"
+        },
+        responseBody: {
+          success: true,
+          data: [
+            {
+              id: 1,
+              name: "Anders Nielsen",
+              email: "anders@company.com",
+              phone: "+45 20304050",
+              role: "employee",
+              employmentType: "fulltime",
+              department: "Operations",
+              initials: "AN",
+              color: "#3B82F6",
+              avatarUrl: "/avatars/anders.jpg",
+              defaultLocation: "Rødovre",
+              isActive: true,
+              hiredDate: "2023-01-15",
+              defaultSchedule: [
+                {
+                  dayOfWeek: 1,
+                  startTime: "08:00",
+                  endTime: "16:00",
+                  locationId: 1
+                }
+              ]
+            }
+          ],
+          total: 12
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/hr/employees/{employeeId}",
+        description: "Hent specifik medarbejderdetaljer",
+        responseBody: {
+          success: true,
+          data: {
+            id: 1,
+            name: "Anders Nielsen",
+            email: "anders@company.com",
+            phone: "+45 20304050",
+            role: "employee",
+            employmentType: "fulltime",
+            department: "Operations",
+            initials: "AN",
+            color: "#3B82F6",
+            avatarUrl: "/avatars/anders.jpg",
+            defaultLocation: "Rødovre",
+            isActive: true,
+            hiredDate: "2023-01-15",
+            defaultSchedule: [
+              {
+                dayOfWeek: 1,
+                startTime: "08:00",
+                endTime: "16:00",
+                locationId: 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        method: "PUT",
+        path: "/api/hr/employees/{employeeId}",
+        description: "Opdater medarbejderinformation. HR skal kunne opdatere medarbejderoplysninger når der sker ændringer i afdeling eller kontaktinfo.",
+        requestBody: {
+          email: "anders.nielsen@company.com",
+          phone: "+45 20304051",
+          department: "Sales"
+        },
+        responseBody: {
+          success: true,
+          message: "Employee updated successfully",
+          data: {
+            id: 1
+          }
+        }
+      }
+    ]
+  },
+  {
+    title: "HR Module - Schedule Templates",
+    description: "Medarbejderes ugentlige vagtskabeloner",
+    endpoints: [
+      {
+        method: "GET",
+        path: "/api/hr/employees/{employeeId}/template",
+        description: "Hent medarbejders vagtskabelon. Vagtplanlæggeren bruger skabelonerne som udgangspunkt for at generere ugentlige arbejdsplaner.",
+        responseBody: {
+          success: true,
+          data: {
+            employeeId: 1,
+            template: [
+              {
+                dayOfWeek: 1,
+                startTime: "08:00",
+                endTime: "16:00",
+                locationId: 1
+              },
+              {
+                dayOfWeek: 2,
+                startTime: "08:00",
+                endTime: "16:00",
+                locationId: 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        method: "PUT",
+        path: "/api/hr/employees/{employeeId}/template",
+        description: "Opdater medarbejders vagtskabelon. Medarbejdere kan have forskellige arbejdstider på forskellige dage, og disse skal kunne opdateres.",
+        requestBody: {
+          template: [
+            {
+              dayOfWeek: 1,
+              startTime: "09:00",
+              endTime: "17:00",
+              locationId: 1
+            },
+            {
+              dayOfWeek: 2,
+              startTime: "09:00",
+              endTime: "17:00",
+              locationId: 2
+            }
+          ]
+        },
+        responseBody: {
+          success: true,
+          message: "Schedule template updated successfully"
+        }
+      }
+    ]
+  },
+  {
+    title: "HR Module - Work Shifts",
+    description: "Faktiske arbejdsvagter og frihedsanmodninger",
+    endpoints: [
+      {
+        method: "GET",
+        path: "/api/hr/shifts",
+        description: "Hent arbejdsvagter for datointerval. Viser vagtplaner for en given periode, så både medarbejdere og ledere kan se hvem der arbejder hvornår.",
+        queryParams: {
+          startDate: "Start date (YYYY-MM-DD)",
+          endDate: "End date (YYYY-MM-DD)",
+          employeeId: "Filter by employee",
+          status: "Filter by status (requested/approved/rejected/fixed)",
+          requestType: "Filter by type (shift/timeoff/change)"
+        },
+        responseBody: {
+          success: true,
+          data: [
+            {
+              id: 101,
+              employeeId: 1,
+              employeeName: "Anders Nielsen",
+              date: "2025-09-05",
+              startTime: "08:00",
+              endTime: "16:00",
+              locationId: 1,
+              requestType: "shift",
+              status: "approved",
+              comment: null,
+              approvedBy: 6,
+              approvedAt: "2025-09-04T14:30:00Z",
+              createdBy: 1,
+              createdAt: "2025-09-03T10:00:00Z"
+            }
+          ],
+          total: 245
+        }
+      },
+      {
+        method: "POST",
+        path: "/api/hr/shifts",
+        description: "Opret ny vagt eller frihedsanmodning. Medarbejdere skal kunne anmode om fridage eller bytte vagter, hvilket kræver godkendelse fra leder.",
+        requestBody: {
+          employeeId: 1,
+          date: "2025-09-10",
+          startTime: "08:00",
+          endTime: "16:00",
+          location: "Rødovre",
+          requestType: "shift",
+          status: "requested",
+          comment: "Covering for Louise"
+        },
+        responseBody: {
+          success: true,
+          message: "Shift request created successfully",
+          data: {
+            id: 102
+          }
+        }
+      },
+      {
+        method: "PUT",
+        path: "/api/hr/shifts/{shiftId}/approve",
+        description: "Godkend eller afvis vagtanmodning. Ledere skal kunne godkende eller afvise vagtanmodninger baseret på bemanding og forretningsbehov.",
+        requestBody: {
+          action: "approve",
+          comment: "Approved - coverage confirmed"
+        },
+        responseBody: {
+          success: true,
+          message: "Shift request approved",
+          data: {
+            id: 102,
+            status: "approved",
+            approvedBy: 6,
+            approvedAt: "2025-09-05T10:30:00Z"
+          }
+        }
+      },
+      {
+        method: "PUT",
+        path: "/api/hr/shifts/{shiftId}/reject",
+        description: "Afvis en vagt eller frihedsanmodning. Giver ledere mulighed for at afvise anmodninger med begrundelse, så medarbejderen forstår hvorfor.",
+        requestBody: {
+          action: "reject",
+          comment: "Cannot approve - insufficient coverage for this date"
+        },
+        responseBody: {
+          success: true,
+          message: "Shift request rejected",
+          data: {
+            id: 103,
+            status: "rejected",
+            rejectedBy: 6,
+            rejectedAt: "2025-09-05T11:15:00Z",
+            rejectionReason: "Cannot approve - insufficient coverage for this date"
+          }
+        }
+      },
+      {
+        method: "DELETE",
+        path: "/api/hr/shifts/{shiftId}",
+        description: "Slet/annuller en vagtanmodning (kun hvis status er 'requested'). Medarbejdere kan fortryde deres anmodninger før de bliver behandlet af leder.",
+        responseBody: {
+          success: true,
+          message: "Shift request cancelled successfully",
+          data: {
+            id: 104,
+            deletedAt: "2025-09-05T11:20:00Z"
+          }
+        }
+      }
+    ]
+  },
+  {
+    title: "HR Module - Week Scheduler",
+    description: "Masseoprettelse af vagter og ugentlig skemahåndtering",
+    endpoints: [
+      {
+        method: "POST",
+        path: "/api/hr/week-schedule/apply",
+        description: "Anvend vagtskabeloner til at oprette faktiske vagter for en uge. Når admin/manager bruger Week Scheduler til at planlægge en uge, skal systemet oprette faktiske vagter baseret på medarbejdernes skabeloner i work_shifts tabellen.",
+        requestBody: {
+          weekStartDate: "2025-09-08",
+          employeeIds: [1, 6, 2],
+          applyTemplates: true,
+          overwriteExisting: false,
+          createdBy: 6
+        },
+        responseBody: {
+          success: true,
+          message: "Week schedule applied successfully",
+          data: {
+            weekStartDate: "2025-09-08",
+            shiftsCreated: 15,
+            shiftsSkipped: 2,
+            details: [
+              {
+                employeeId: 1,
+                employeeName: "Anders Nielsen",
+                shiftsCreated: 5,
+                shifts: [
+                  {
+                    id: 201,
+                    date: "2025-09-08",
+                    startTime: "08:00",
+                    endTime: "16:00",
+                    locationId: 1
+                  }
+                ]
+              },
+              {
+                employeeId: 6, 
+                employeeName: "Casper Andersen",
+                shiftsCreated: 5,
+                shifts: [
+                  {
+                    id: 206,
+                    date: "2025-09-08",
+                    startTime: "08:00",
+                    endTime: "16:00",
+                    locationId: 2
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/hr/week-schedule/preview",
+        description: "Forhåndsvisning af hvilke vagter der ville blive oprettet fra skabeloner. Manager skal kunne se en preview af hvad der vil blive oprettet før de faktisk opretter vagterne.",
+        queryParams: {
+          weekStartDate: "Week start date (YYYY-MM-DD)",
+          employeeIds: "Comma-separated employee IDs (optional)"
+        },
+        responseBody: {
+          success: true,
+          data: {
+            weekStartDate: "2025-09-08",
+            preview: [
+              {
+                employeeId: 1,
+                employeeName: "Anders Nielsen",
+                shifts: [
+                  {
+                    date: "2025-09-08",
+                    dayOfWeek: 1,
+                    startTime: "08:00",
+                    endTime: "16:00",
+                    locationId: 1,
+                    locationName: "Rødovre",
+                    fromTemplate: true,
+                    wouldOverwrite: false
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        method: "DELETE",
+        path: "/api/hr/week-schedule/{weekStartDate}",
+        description: "Slet alle vagter for en specifik uge. Manager skal kunne slette en hel uges planlægning hvis der er sket fejl eller store ændringer.",
+        responseBody: {
+          success: true,
+          message: "Week schedule deleted successfully",
+          data: {
+            weekStartDate: "2025-09-08",
+            shiftsDeleted: 15,
+            affectedEmployees: [1, 2, 6]
+          }
+        }
+      }
+    ]
+  },
+  {
+    title: "HR Module - Events",
+    description: "Firmabegivenheder, møder og aktiviteter",
+    endpoints: [
+      {
+        method: "GET",
+        path: "/api/hr/events",
+        description: "Hent begivenheder for datointerval. Viser firmabegivenheder, møder og aktiviteter i kalenderen, så alle kan se hvad der sker.",
+        queryParams: {
+          startDate: "Start date (YYYY-MM-DD)",
+          endDate: "End date (YYYY-MM-DD)",
+          eventType: "Filter by event type",
+          employeeId: "Filter events for specific employee"
+        },
+        responseBody: {
+          success: true,
+          data: [
+            {
+              id: 1,
+              date: "2025-09-10",
+              startTime: "10:00",
+              endTime: "12:00",
+              eventType: "internal_meeting",
+              title: "Weekly Team Sync",
+              description: "Regular team status meeting",
+              locationId: 1,
+              locationText: "Meeting Room A",
+              color: "#3B82F6",
+              attendees: [1, 2, 6],
+              createdBy: 6,
+              createdAt: "2025-09-01T09:00:00Z"
+            }
+          ],
+          total: 15
+        }
+      },
+      {
+        method: "POST",
+        path: "/api/hr/events",
+        description: "Opret ny begivenhed. HR og ledere skal kunne oprette møder, sociale arrangementer og andre begivenheder.",
+        requestBody: {
+          date: "2025-09-15",
+          startTime: "14:00",
+          endTime: "16:00",
+          eventType: "customer_visit",
+          title: "Client Presentation",
+          description: "Product demo for new client",
+          locationId: 1,
+          locationText: "Showroom",
+          attendees: [1, 6]
+        },
+        responseBody: {
+          success: true,
+          message: "Event created successfully",
+          data: {
+            id: 2
+          }
+        }
+      },
+      {
+        method: "PUT",
+        path: "/api/hr/events/{eventId}",
+        description: "Opdater en eksisterende begivenhed",
+        requestBody: {
+          startTime: "15:00",
+          endTime: "17:00",
+          locationId: 1,
+          locationText: "Conference Room B",
+          attendees: [1, 6, 3]
+        },
+        responseBody: {
+          success: true,
+          message: "Event updated successfully",
+          data: {
+            id: 2,
+            updatedAt: "2025-09-05T11:45:00Z"
+          }
+        }
+      },
+      {
+        method: "DELETE",
+        path: "/api/hr/events/{eventId}",
+        description: "Slet/annuller en begivenhed. Begivenheder kan blive aflyst, og det skal registreres så alle deltagere bliver informeret.",
+        responseBody: {
+          success: true,
+          message: "Event cancelled successfully",
+          data: {
+            id: 2,
+            deletedAt: "2025-09-05T11:50:00Z",
+            deletedBy: 6
+          }
+        }
+      },
+      {
+        method: "POST",
+        path: "/api/hr/events/{eventId}/attendees",
+        description: "Tilføj deltagere til en begivenhed",
+        requestBody: {
+          attendees: [4, 5]
+        },
+        responseBody: {
+          success: true,
+          message: "Attendees added successfully",
+          data: {
+            eventId: 2,
+            newAttendees: [4, 5],
+            totalAttendees: 5
+          }
+        }
+      },
+      {
+        method: "DELETE",
+        path: "/api/hr/events/{eventId}/attendees/{employeeId}",
+        description: "Fjern en deltager fra en begivenhed",
+        responseBody: {
+          success: true,
+          message: "Attendee removed from event",
+          data: {
+            eventId: 2,
+            removedAttendee: 3,
+            remainingAttendees: 4
+          }
+        }
+      }
+    ]
+  },
+  // ============ July 2025 - Original Modules ============
   {
     title: "Customers",
-    description: "Endpoints for managing customer data",
+    description: "Endpoints til håndtering af kundedata",
     endpoints: [
       {
         method: "GET",
         path: "/api/customers",
-        description: "Get all customers with optional filtering",
+        description: "Hent alle kunder med valgfri filtrering",
         queryParams: {
           type: "Filter by customer type (e.g., 'B2B Promotion Customer')",
           country: "Filter by country (e.g., 'Denmark', 'Sweden')",
@@ -35,7 +788,7 @@ const endpointSections: EndpointSection[] = [
         responseBody: {
           data: [
             {
-              customerId: "1796",
+              customerId: 1796,
               name: "Busy ApS",
               type: "B2B Promotion Customer",
               resellerType: "B2B",
@@ -59,9 +812,9 @@ const endpointSections: EndpointSection[] = [
       {
         method: "GET",
         path: "/api/customers/{customerId}",
-        description: "Get a specific customer by ID",
+        description: "Hent en specifik kunde via ID",
         responseBody: {
-          customerId: "1796",
+          customerId: 1796,
           name: "Busy ApS",
           type: "B2B Promotion Customer",
           resellerType: "B2B",
@@ -81,12 +834,12 @@ const endpointSections: EndpointSection[] = [
   },
   {
     title: "Requests",
-    description: "Endpoints for sales requests and opportunities",
+    description: "Endpoints til salgsanmodninger og muligheder",
     endpoints: [
       {
         method: "GET",
         path: "/api/requests",
-        description: "Get all requests with filtering and pagination",
+        description: "Hent alle anmodninger med filtrering og paginering",
         queryParams: {
           status: "Filter by current status (e.g., 'Pending B2B', 'Order in')",
           assignee: "Filter by assigned sales person (e.g., 'CAS', 'CHR')",
@@ -103,7 +856,7 @@ const endpointSections: EndpointSection[] = [
               requestId: "REQ3042",
               requestDate: "2025-06-18T00:00:00Z",
               customer: "Busy ApS",
-              customerId: "1796",
+              customerId: 1796,
               contactPerson: "Brian Frisch",
               origin: "Network",
               b2bSales: "CAS",
@@ -135,12 +888,12 @@ const endpointSections: EndpointSection[] = [
       {
         method: "GET",
         path: "/api/requests/{requestId}",
-        description: "Get a specific request by ID",
+        description: "Hent en specifik anmodning via ID",
         responseBody: {
           requestId: "REQ3042",
           requestDate: "2025-06-18T00:00:00Z",
           customer: "Busy ApS",
-          customerId: "1796",
+          customerId: 1796,
           contactPerson: "Brian Frisch",
           origin: "Network",
           b2bSales: "CAS",
@@ -170,7 +923,7 @@ const endpointSections: EndpointSection[] = [
       {
         method: "PUT",
         path: "/api/requests/{requestId}/status",
-        description: "Update request status (for drag and drop functionality)",
+        description: "Opdater anmodningsstatus (til træk og slip funktionalitet)",
         requestBody: {
           newStatus: "Sample",
           oldStatus: "Request",
@@ -190,12 +943,12 @@ const endpointSections: EndpointSection[] = [
   },
   {
     title: "Orders",
-    description: "Endpoints for order management",
+    description: "Endpoints til ordrehåndtering",
     endpoints: [
       {
         method: "GET",
         path: "/api/orders",
-        description: "Get all orders with filtering",
+        description: "Hent alle ordrer med filtrering",
         queryParams: {
           status: "Filter by order status",
           dateFrom: "Orders placed after this date",
@@ -209,7 +962,7 @@ const endpointSections: EndpointSection[] = [
               orderNumber: "ORD-2025-0198",
               orderDate: "2025-06-10T00:00:00Z",
               customer: "EventMasters Ltd",
-              customerId: "1890",
+              customerId: 1890,
               currentStatus: "Approved & Activated",
               orderValue: 145600,
               deliveryDate: "2025-06-25T00:00:00Z",
@@ -238,12 +991,12 @@ const endpointSections: EndpointSection[] = [
   },
   {
     title: "Finance",
-    description: "Endpoints for invoices and financial data",
+    description: "Endpoints til fakturaer og økonomiske data",
     endpoints: [
       {
         method: "GET",
         path: "/api/invoices",
-        description: "Get all invoices with filtering",
+        description: "Hent alle fakturaer med filtrering",
         queryParams: {
           status: "Payment status filter",
           overdue: "Show only overdue invoices (true/false)",
@@ -258,7 +1011,7 @@ const endpointSections: EndpointSection[] = [
               invoiceDate: "2025-06-01T00:00:00Z",
               dueDate: "2025-06-15T00:00:00Z",
               customer: "TherkelsenKristiansen ApS",
-              customerId: "1682",
+              customerId: 1682,
               requestId: "REQ2876",
               orderNumber: "ORD-2025-0142",
               amount: 125000,
@@ -292,12 +1045,12 @@ const endpointSections: EndpointSection[] = [
   },
   {
     title: "Reference Data",
-    description: "Endpoints for dropdown options and reference data",
+    description: "Endpoints til dropdown muligheder og referencedata",
     endpoints: [
       {
         method: "GET",
         path: "/api/reference/assignees",
-        description: "Get all available sales assignees",
+        description: "Hent alle tilgængelige salgsansvarlige",
         responseBody: {
           assignees: [
             { code: "CAS", name: "Casper Andersen", active: true },
@@ -312,7 +1065,7 @@ const endpointSections: EndpointSection[] = [
       {
         method: "GET",
         path: "/api/reference/statuses",
-        description: "Get all available statuses",
+        description: "Hent alle tilgængelige statusser",
         responseBody: {
           requestStatuses: {
             start: ["Request", "Sample", "Offer", "Weborder", "Reorder"],
@@ -345,7 +1098,7 @@ const endpointSections: EndpointSection[] = [
       {
         method: "GET",
         path: "/api/reference/origins",
-        description: "Get all request origin types",
+        description: "Hent alle anmodningstyper",
         responseBody: {
           origins: [
             "Unknown",
@@ -364,6 +1117,290 @@ const endpointSections: EndpointSection[] = [
         },
       },
     ],
+  },
+  {
+    title: "System Configuration",
+    description: "Systemindstillinger og konfigurationsstyring",
+    endpoints: [
+      {
+        method: "GET",
+        path: "/api/config",
+        description: "Hent al systemkonfiguration. Frontend skal kende systemindstillinger som valuta, arbejdsuger og standard arbejdstider.",
+        responseBody: {
+          success: true,
+          data: {
+            company: {
+              name: "B2B Group",
+              locations: [
+                { id: 1, name: "Rødovre" },
+                { id: 2, name: "Ribe" },
+                { id: 3, name: "Hjemmefra" }
+              ],
+              defaultLocationId: 1,
+              currency: "DKK",
+              locale: "da-DK"
+            },
+            hr: {
+              shiftDefaults: {
+                startTime: "08:00",
+                endTime: "16:00",
+                locationId: 1
+              },
+              timeSlotSettings: {
+                startHour: 6,
+                endHour: 22,
+                interval: 30
+              },
+              workWeek: {
+                startDay: 1,
+                workDays: [1, 2, 3, 4, 5]
+              },
+              eventTypes: [
+                { id: "internal_meeting", label: "Internal Meeting", color: "#3B82F6" },
+                { id: "team_session", label: "Team Session", color: "#8B5CF6" },
+                { id: "showroom_visitor", label: "Showroom Visit", color: "#10B981" },
+                { id: "trade_fair", label: "Trade Fair", color: "#F59E0B" },
+                { id: "out_of_office", label: "Out of Office", color: "#6B7280" },
+                { id: "customer_visit", label: "Customer Visit", color: "#EC4899" },
+                { id: "supplier_meeting", label: "Supplier Meeting", color: "#14B8A6" }
+              ]
+            },
+            sales: {
+              statuses: ["Request", "Sample", "Offer", "Order", "Closed"],
+              priorityLevels: [
+                { id: "normal", label: "Normal", color: "#6B7280" },
+                { id: "high", label: "High", color: "#F59E0B", daysThreshold: 0 },
+                { id: "critical", label: "Critical", color: "#EF4444", daysThreshold: -7 }
+              ]
+            },
+            orders: {
+              statuses: [
+                "Order in",
+                "Pending B2B",
+                "Pending supplier",
+                "Pending customer",
+                "Approved & Activated",
+                "Shipped",
+                "Delivered",
+                "Invoiced"
+              ],
+              paymentStatuses: ["Pending", "Paid", "Overdue", "Unknown"]
+            },
+            finance: {
+              paymentTerms: [0, 14, 30, 45, 60],
+              invoiceStatuses: [
+                "Pending Payment",
+                "Payment Received",
+                "Overdue",
+                "Under Review"
+              ]
+            }
+          }
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/config/{category}",
+        description: "Hent konfiguration for specifik kategori",
+        responseBody: {
+          success: true,
+          data: {
+            category: "hr",
+            config: {
+              shiftDefaults: {
+                startTime: "08:00",
+                endTime: "16:00",
+                locationId: 1
+              },
+              timeSlotSettings: {
+                startHour: 6,
+                endHour: 22,
+                interval: 30
+              }
+            }
+          }
+        }
+      },
+      {
+        method: "PUT",
+        path: "/api/config/{category}/{key}",
+        description: "Opdater specifik konfigurationsværdi",
+        requestBody: {
+          value: {
+            startTime: "09:00",
+            endTime: "17:00",
+            location: "Rødovre"
+          }
+        },
+        responseBody: {
+          success: true,
+          message: "Configuration updated successfully",
+          data: {
+            category: "hr",
+            key: "shiftDefaults",
+            value: {
+              startTime: "09:00",
+              endTime: "17:00",
+              locationId: 1
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    title: "System Logging", 
+    description: "Logging af alle handlinger i systemet for audit og sikkerhed",
+    endpoints: [
+      {
+        method: "POST",
+        path: "/api/logs",
+        description: "Log en handling til systemlog. Alle API kald skal logges for audit trail, sikkerhed og fejlfinding. Dette endpoint kaldes automatisk af alle andre endpoints.",
+        requestBody: {
+          actionType: "request_status_changed",  // Name from log_action_types table
+          targetEntity: "request",
+          targetId: 1234,
+          actionDetails: {
+            previousStatus: "Sample",
+            newStatus: "Offer",
+            changedBy: "drag_drop"
+          },
+          oldValues: { status: "Sample", updatedAt: "2025-09-01T10:00:00Z" },
+          newValues: { status: "Offer", updatedAt: "2025-09-05T14:30:00Z" }
+        },
+        responseBody: {
+          success: true,
+          logId: "log-12345",
+          message: "Action logged successfully"
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/logs",
+        description: "Hent system logs (admin: alle logs, bruger: egne logs). Admins skal kunne se alle logs for overvågning. Brugere kan se deres egne handlinger for transparens.",
+        queryParams: {
+          userId: "Filter by specific user (admin only)",
+          actionType: "Filter by action type name",
+          category: "Filter by category (auth, data, admin, hr, sales, finance)",
+          targetEntity: "Filter by entity type",
+          targetId: "Filter by specific entity ID",
+          dateFrom: "Start date (ISO 8601)",
+          dateTo: "End date (ISO 8601)",
+          severity: "Filter by severity (info, warning, error, critical)",
+          page: "Page number (default 1)",
+          limit: "Results per page (default 50, max 200)"
+        },
+        responseBody: {
+          success: true,
+          data: [
+            {
+              id: 12345,
+              actionType: {
+                name: "request_status_changed",
+                category: "sales",
+                description: "Salgsforespørgsel status ændret",
+                severity: "info",
+                isAdminOnly: false
+              },
+              user: {
+                id: "550e8400-e29b-41d4-a716-446655440000",
+                name: "Casper Pedersen",
+                email: "casper@b2bgroup.dk"
+              },
+              employee: {
+                id: 8,
+                name: "Casper Pedersen",
+                department: "Management"
+              },
+              targetEntity: "request",
+              targetId: 1234,
+              actionDetails: {
+                previousStatus: "Sample",
+                newStatus: "Offer",
+                changedBy: "drag_drop"
+              },
+              oldValues: { status: "Sample" },
+              newValues: { status: "Offer" },
+              ipAddress: "192.168.1.100",
+              userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)...",
+              requestId: "req-abc123",
+              responseStatus: 200,
+              errorMessage: null,
+              durationMs: 145,
+              createdAt: "2025-09-05T14:30:00Z"
+            }
+          ],
+          pagination: {
+            page: 1,
+            limit: 50,
+            total: 1250,
+            totalPages: 25
+          }
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/logs/action-types",
+        description: "Hent alle mulige handlingstyper. Frontend skal kunne vise filter muligheder og forstå log typer.",
+        queryParams: {
+          includeAdminOnly: "Include admin-only action types (admin users only, default false)"
+        },
+        responseBody: {
+          success: true,
+          data: [
+            {
+              id: 1,
+              name: "user_login",
+              category: "auth",
+              description: "Bruger logger ind",
+              severity: "info",
+              isAdminOnly: false,
+              isActive: true
+            },
+            {
+              id: 2,
+              name: "request_status_changed",
+              category: "sales",
+              description: "Salgsforespørgsel status ændret",
+              severity: "info",
+              isAdminOnly: false,
+              isActive: true
+            }
+            // ... more action types
+          ]
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/logs/stats",
+        description: "Hent statistik over system logs. Vise dashboard med log aktivitet, mest brugte funktioner, og fejl trends.",
+        queryParams: {
+          period: "Time period (today, week, month, year)",
+          groupBy: "Group by field (actionType, category, user, severity)"
+        },
+        responseBody: {
+          success: true,
+          data: {
+            period: "week",
+            totalActions: 5234,
+            uniqueUsers: 8,
+            topActions: [
+              { name: "data_view", count: 2145, percentage: 41 },
+              { name: "data_search", count: 892, percentage: 17 },
+              { name: "request_status_changed", count: 234, percentage: 4.5 }
+            ],
+            severityBreakdown: {
+              info: 4890,
+              warning: 312,
+              error: 32,
+              critical: 0
+            },
+            errorRate: 0.6,
+            averageResponseTime: 234 // milliseconds
+          }
+        }
+      }
+    ]
   },
 ];
 
@@ -385,28 +1422,45 @@ export default function EndpointsSection() {
     );
   };
 
-  return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">API Endpoints</h2>
+  // Split sections into July and September groups
+  // July sections are at the end (after comment "July 2025 - Original Modules")
+  const julySections = endpointSections.filter(s => 
+    ["Customers", "Requests", "Orders", "Finance", "Reference Data"].includes(s.title)
+  );
+  // September sections are everything else
+  const septemberSections = endpointSections.filter(s => 
+    !["Customers", "Requests", "Orders", "Finance", "Reference Data"].includes(s.title)
+  );
 
-      {endpointSections.map((section) => {
-        const isExpanded = expandedSections.includes(section.title);
-        
-        return (
-          <div
-            key={section.title}
-            className="bg-white rounded-lg shadow-sm border border-gray-200"
-          >
-            <button
+  const renderSections = (sections: EndpointSection[]) => {
+    return sections.map((section) => {
+      const isExpanded = expandedSections.includes(section.title);
+      
+      return (
+        <div
+          key={section.title}
+          className="bg-white rounded-lg shadow-sm border border-gray-200"
+        >
+          <button
               onClick={() => toggleSection(section.title)}
               className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
             >
-              <div>
+              <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-900">
                   {section.title}
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
                   {section.description}
+                </p>
+                <p className="text-xs text-blue-600 mt-2 font-medium">
+                  <span className="inline-flex items-center gap-1">
+                    {isExpanded ? (
+                      <ChevronDownIcon className="w-3 h-3" />
+                    ) : (
+                      <ChevronRightIcon className="w-3 h-3" />
+                    )}
+                    {section.endpoints.length} endpoints • Klik for at {isExpanded ? 'skjule' : 'se'} detaljer
+                  </span>
                 </p>
               </div>
               {isExpanded ? (
@@ -437,12 +1491,12 @@ export default function EndpointsSection() {
                             <span
                               className={`px-2 py-1 text-xs font-semibold rounded ${
                                 endpoint.method === "GET"
-                                  ? "bg-blue-100 text-blue-700"
+                                  ? "bg-gray-100 text-gray-700"
                                   : endpoint.method === "POST"
-                                  ? "bg-green-100 text-green-700"
+                                  ? "bg-gray-100 text-gray-700"
                                   : endpoint.method === "PUT"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-red-100 text-red-700"
+                                  ? "bg-gray-100 text-gray-700"
+                                  : "bg-gray-100 text-gray-700"
                               }`}
                             >
                               {endpoint.method}
@@ -451,15 +1505,22 @@ export default function EndpointsSection() {
                               {endpoint.path}
                             </code>
                           </div>
-                          {isEndpointExpanded ? (
-                            <ChevronDownIcon className="w-4 h-4 text-gray-400" />
-                          ) : (
-                            <ChevronRightIcon className="w-4 h-4 text-gray-400" />
-                          )}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500">
+                              {isEndpointExpanded ? 'Skjul detaljer' : 'Vis detaljer'}
+                            </span>
+                            {isEndpointExpanded ? (
+                              <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+                            ) : (
+                              <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+                            )}
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-600 mt-2 ml-16">
-                          {endpoint.description}
-                        </p>
+                        <div className="ml-16 mt-2 space-y-1">
+                          <p className="text-sm text-gray-600">
+                            {endpoint.description}
+                          </p>
+                        </div>
                       </button>
 
                       {isEndpointExpanded && (
@@ -514,7 +1575,38 @@ export default function EndpointsSection() {
             )}
           </div>
         );
-      })}
+      });
+  };
+
+  return (
+    <div className="space-y-8">
+      <h2 className="text-2xl font-bold text-gray-900">API Endpoints</h2>
+
+      {/* September 2025 - New Modules */}
+      <div className="space-y-4">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">September 2025 - Nye Funktioner</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Nye API endpoints tilføjet i september 2025 for Authentication, HR modulet og System Configuration.
+          </p>
+        </div>
+        <div className="space-y-4 ml-2">
+          {renderSections(septemberSections)}
+        </div>
+      </div>
+
+      {/* July 2025 - Original Modules */}
+      <div className="space-y-4">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">Juli 2025 - Original Funktioner</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Original API endpoints for CRM dashboard - kunde håndtering, salg, ordrer og økonomi.
+          </p>
+        </div>
+        <div className="space-y-4 ml-2">
+          {renderSections(julySections)}
+        </div>
+      </div>
     </div>
   );
 }
