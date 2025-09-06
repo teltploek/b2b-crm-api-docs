@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon, ChevronRightIcon, ClipboardDocumentIcon, CheckIcon } from "@heroicons/react/24/outline";
 import DatabaseDiagram from './DatabaseDiagram';
 
 interface TableColumn {
@@ -355,6 +355,8 @@ export default function DatabaseSection() {
   const [expandedTables, setExpandedTables] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [tableTabs, setTableTabs] = useState<{ [key: string]: "columns" | "sql" }>({});
+  const [copiedTable, setCopiedTable] = useState<string | null>(null);
+  const [copiedColumn, setCopiedColumn] = useState<string | null>(null);
 
   const toggleTable = (tableName: string) => {
     setExpandedTables(prev => 
@@ -366,6 +368,28 @@ export default function DatabaseSection() {
 
   const setTableTab = (tableName: string, tab: "columns" | "sql") => {
     setTableTabs(prev => ({ ...prev, [tableName]: tab }));
+  };
+
+  const copyTableName = async (tableName: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent toggling the table expansion
+    try {
+      await navigator.clipboard.writeText(tableName);
+      setCopiedTable(tableName);
+      setTimeout(() => setCopiedTable(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const copyColumnName = async (columnName: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(columnName);
+      setCopiedColumn(columnName);
+      setTimeout(() => setCopiedColumn(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
   };
 
   const getTableSQL = (tableName: string): string => {
@@ -994,10 +1018,23 @@ CREATE NONCLUSTERED INDEX IX_RefreshTokens_ExpiresAt ON RefreshTokens(ExpiresAt)
                       ) : (
                         <ChevronRightIcon className="h-5 w-5 text-gray-500" />
                       )}
-                      <div className="text-left">
-                        <h4 className="font-mono text-base font-semibold text-gray-900">
-                          {table.name}
-                        </h4>
+                      <div className="text-left flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-mono text-base font-semibold text-gray-900">
+                            {table.name}
+                          </h4>
+                          <button
+                            onClick={(e) => copyTableName(table.name, e)}
+                            className="inline-flex items-center justify-center p-1 rounded hover:bg-gray-200 transition-colors"
+                            title={`Kopier "${table.name}"`}
+                          >
+                            {copiedTable === table.name ? (
+                              <CheckIcon className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <ClipboardDocumentIcon className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+                            )}
+                          </button>
+                        </div>
                         <p className="text-sm text-gray-600 mt-1">{table.description}</p>
                         <p className="text-xs text-blue-600 mt-2 font-medium">
                           <span className="inline-flex items-center gap-1">
@@ -1051,32 +1088,45 @@ CREATE NONCLUSTERED INDEX IX_RefreshTokens_ExpiresAt ON RefreshTokens(ExpiresAt)
 
                           {/* Columns */}
                           <div className="divide-y divide-gray-100">
-                            {table.columns.map((column, idx) => (
-                              <div key={idx} className="px-6 py-3 hover:bg-gray-50">
-                                <div className="grid grid-cols-12 gap-4 text-sm">
-                                  <div className="col-span-3 font-mono text-gray-900">
-                                    {column.name}
-                                    {column.constraints?.includes("PRIMARY KEY") && (
-                                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">PK</span>
-                                    )}
-                                    {column.constraints?.includes("REFERENCES") && (
-                                      <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">FK</span>
-                                    )}
-                                  </div>
-                                  <div className="col-span-2 font-mono text-gray-600 text-xs">
-                                    {column.type}
-                                  </div>
-                                  <div className="col-span-3 text-gray-600 text-xs">
-                                    {column.constraints?.replace("PRIMARY KEY", "")
-                                      .replace("REFERENCES", "→")
-                                      .trim() || "-"}
-                                  </div>
-                                  <div className="col-span-4 text-gray-700">
-                                    {column.description || "-"}
+                            {table.columns.map((column, idx) => {
+                              return (
+                                <div key={idx} className="px-6 py-3 hover:bg-gray-50">
+                                  <div className="grid grid-cols-12 gap-4 text-sm">
+                                    <div className="col-span-3 font-mono text-gray-900 flex items-center gap-1">
+                                      <button
+                                        onClick={(e) => copyColumnName(column.name, e)}
+                                        className="inline-flex items-center justify-center p-1 rounded hover:bg-gray-200 transition-colors flex-shrink-0"
+                                        title={`Kopier "${column.name}"`}
+                                      >
+                                        {copiedColumn === column.name ? (
+                                          <CheckIcon className="h-3.5 w-3.5 text-green-600" />
+                                        ) : (
+                                          <ClipboardDocumentIcon className="h-3.5 w-3.5 text-gray-500 hover:text-gray-700" />
+                                        )}
+                                      </button>
+                                      <span>{column.name}</span>
+                                      {column.constraints?.includes("PRIMARY KEY") && (
+                                        <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">PK</span>
+                                      )}
+                                      {column.constraints?.includes("REFERENCES") && (
+                                        <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">FK</span>
+                                      )}
+                                    </div>
+                                    <div className="col-span-2 font-mono text-gray-600 text-xs">
+                                      {column.type}
+                                    </div>
+                                    <div className="col-span-3 text-gray-600 text-xs">
+                                      {column.constraints?.replace("PRIMARY KEY", "")
+                                        .replace("REFERENCES", "→")
+                                        .trim() || "-"}
+                                    </div>
+                                    <div className="col-span-4 text-gray-700">
+                                      {column.description || "-"}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                           
                           {/* Indexes and Foreign Keys */}
