@@ -1255,19 +1255,74 @@ const endpointSections: EndpointSection[] = [
       {
         method: "POST",
         path: "/api/logs",
-        description: "Log en handling til systemlog. Alle API kald skal logges for audit trail, sikkerhed og fejlfinding. Dette endpoint kaldes automatisk af alle andre endpoints.",
+        description: "Log en handling til systemlog. Alle API kald skal logges for audit trail, sikkerhed og fejlfinding. Dette endpoint kaldes AUTOMATISK af alle andre endpoints - backend skal implementere dette.",
         why: "Kritisk for compliance (GDPR, revisionsspor), sikkerhedsovervågning, fejlfinding, og performance tracking. Hver handling i systemet skal kunne spores tilbage til bruger, tidspunkt og kontekst.",
         requestBody: {
-          actionType: "request_status_changed",  // Name from log_action_types table
-          targetEntity: "request",
-          targetId: 1234,
-          actionDetails: {
-            previousStatus: "Sample",
-            newStatus: "Offer",
-            changedBy: "drag_drop"
+          // EKSEMPEL 1: Status ændring (fra PUT /api/requests/{id}/status)
+          example1_statusChange: {
+            actionType: "request_status_changed",
+            targetEntity: "request",
+            targetId: "REQ3042",
+            actionDetails: {
+              previousStatus: "Sample",
+              newStatus: "Offer",
+              changedBy: "drag_drop"
+            },
+            oldValues: { status: "Sample", updatedAt: "2025-09-01T10:00:00Z" },
+            newValues: { status: "Offer", updatedAt: "2025-09-05T14:30:00Z" }
           },
-          oldValues: { status: "Sample", updatedAt: "2025-09-01T10:00:00Z" },
-          newValues: { status: "Offer", updatedAt: "2025-09-05T14:30:00Z" }
+          // EKSEMPEL 2: Failed login (fra POST /api/auth/login)
+          example2_failedLogin: {
+            actionType: "login_failed",
+            targetEntity: "user",
+            targetId: null,
+            actionDetails: {
+              username: "casper",
+              reason: "invalid_credentials",
+              attemptNumber: 3
+            },
+            severity: "warning",
+            errorMessage: "Invalid username or password"
+          },
+          // EKSEMPEL 3: Ordre oprettet (fra POST /api/orders)
+          example3_orderCreated: {
+            actionType: "order_created",
+            targetEntity: "order",
+            targetId: "ORD-2025-0542",
+            actionDetails: {
+              customerId: 1796,
+              orderValue: 45000,
+              itemCount: 3
+            },
+            newValues: {
+              orderNumber: "ORD-2025-0542",
+              status: "Order in",
+              createdAt: "2025-09-05T14:30:00Z"
+            }
+          },
+          // EKSEMPEL 4: Vagt godkendt (fra POST /api/hr/shifts/{id}/approve)
+          example4_shiftApproved: {
+            actionType: "shift_approved",
+            targetEntity: "shift",
+            targetId: 102,
+            actionDetails: {
+              approvedBy: 6,
+              employeeId: 1,
+              shiftDate: "2025-09-10"
+            },
+            oldValues: { status: "requested" },
+            newValues: { status: "approved", approvedBy: 6 }
+          },
+          // EKSEMPEL 5: Bulk opdatering
+          example5_bulkUpdate: {
+            actionType: "bulk_status_update",
+            targetEntity: "request",
+            actionDetails: {
+              operation: "cancel_old_requests",
+              affectedCount: 15,
+              reason: "Deadline overskredet"
+            }
+          }
         },
         responseBody: {
           success: true,
@@ -1280,6 +1335,17 @@ const endpointSections: EndpointSection[] = [
         path: "/api/logs",
         description: "Hent system logs (admin: alle logs, bruger: egne logs). Admins skal kunne se alle logs for overvågning. Brugere kan se deres egne handlinger for transparens.",
         queryParams: {
+          // EKSEMPEL 1: "Vis alle login fejl i dag"
+          example1: "/api/logs?actionType=login_failed&dateFrom=2025-09-05T00:00:00Z",
+          // EKSEMPEL 2: "Hvem har ændret REQ3042?"
+          example2: "/api/logs?targetEntity=request&targetId=REQ3042",
+          // EKSEMPEL 3: "Caspers handlinger i denne uge"
+          example3: "/api/logs?userId=6&dateFrom=2025-09-01T00:00:00Z",
+          // EKSEMPEL 4: "Alle kritiske fejl"
+          example4: "/api/logs?severity=error,critical&limit=100",
+          // EKSEMPEL 5: "HR modul aktivitet"
+          example5: "/api/logs?category=hr&page=1&limit=50",
+          // Standard parametre:
           userId: "Filter by specific user (admin only)",
           actionType: "Filter by action type name",
           category: "Filter by category (auth, data, admin, hr, sales, finance)",
@@ -1453,115 +1519,6 @@ const endpointSections: EndpointSection[] = [
             errorRate: 0.6,
             averageResponseTime: 234 // milliseconds
           }
-        }
-      }
-    ]
-  },
-  {
-    title: "System Logging - Automatic Integration Examples",
-    description: "Eksempler på hvordan andre endpoints automatisk trigger logging",
-    endpoints: [
-      {
-        method: "POST",
-        path: "/api/logs/automatic-examples",
-        description: "EKSEMPLER: Hvordan andre endpoints automatisk trigger logging. Dette er ikke et rigtigt endpoint, men viser hvordan logging integreres.",
-        why: "Viser backend udviklere præcis hvordan hver type API kald skal logge automatisk. Sikrer konsistent logging på tværs af alle moduler.",
-        requestBody: {
-          example1: {
-            userAction: "PUT /api/requests/REQ3042/status",
-            requestPayload: { newStatus: "Sample", oldStatus: "Request" },
-            automaticLog: {
-              actionType: "request_status_changed",
-              targetEntity: "request",
-              targetId: "REQ3042",
-              actionDetails: {
-                previousStatus: "Request",
-                newStatus: "Sample",
-                changedBy: "drag_drop",
-                userInterface: "kanban_board"
-              },
-              oldValues: { status: "Request", updatedAt: "2025-09-01T10:00:00Z" },
-              newValues: { status: "Sample", updatedAt: "2025-09-05T14:30:00Z" }
-            }
-          },
-          example2: {
-            userAction: "POST /api/hr/shifts/102/approve",
-            requestPayload: { action: "approve", comment: "Godkendt" },
-            automaticLog: {
-              actionType: "shift_approved",
-              targetEntity: "shift",
-              targetId: 102,
-              actionDetails: {
-                approvedBy: 6,
-                comment: "Godkendt",
-                employeeId: 1,
-                shiftDate: "2025-09-10"
-              },
-              oldValues: { status: "requested" },
-              newValues: { status: "approved", approvedBy: 6, approvedAt: "2025-09-05T10:30:00Z" }
-            }
-          },
-          example3: {
-            userAction: "POST /api/auth/login FAILED",
-            requestPayload: { username: "casper", password: "wrong" },
-            automaticLog: {
-              actionType: "login_failed",
-              targetEntity: "user",
-              targetId: null,
-              actionDetails: {
-                username: "casper",
-                reason: "invalid_credentials",
-                attemptNumber: 3,
-                ipAddress: "192.168.1.100"
-              },
-              severity: "warning",
-              errorMessage: "Invalid username or password"
-            }
-          },
-          example4: {
-            userAction: "POST /api/orders FAILED",
-            requestPayload: { customerId: 1796, items: [{ productId: "P123", quantity: 100 }] },
-            automaticLog: {
-              actionType: "order_creation_failed",
-              targetEntity: "order",
-              targetId: null,
-              actionDetails: {
-                customerId: 1796,
-                reason: "insufficient_inventory",
-                attemptedItems: [
-                  { productId: "P123", requested: 100, available: 45 }
-                ]
-              },
-              severity: "error",
-              errorMessage: "Cannot create order: Insufficient inventory for product P123",
-              stackTrace: "at OrderService.create() line 234..."
-            }
-          },
-          example5: {
-            userAction: "POST /api/logs/bulk",
-            requestPayload: { operation: "cancel_old_requests", affectedCount: 23 },
-            automaticLog: {
-              actionType: "bulk_status_update",
-              targetEntity: "request",
-              actionDetails: {
-                operation: "cancel_old_requests",
-                criteria: "deadline < '2025-06-01' AND status = 'Pending B2B'",
-                affectedCount: 23,
-                affectedIds: ["REQ2998", "REQ2999", "REQ3000"],
-                reason: "End of promotion period"
-              },
-              bulkChanges: [
-                {
-                  targetId: "REQ2998",
-                  oldValues: { status: "Pending B2B" },
-                  newValues: { status: "Cancelled" }
-                }
-              ]
-            }
-          }
-        },
-        responseBody: {
-          note: "Dette viser automatisk logging patterns - ikke et rigtigt endpoint"
         }
       }
     ]
