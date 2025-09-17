@@ -1255,9 +1255,42 @@ const endpointSections: EndpointSection[] = [
       {
         method: "POST",
         path: "/api/logs",
-        description: "Log en handling til systemlog. Alle API kald skal logges for audit trail, sikkerhed og fejlfinding. Dette endpoint kaldes AUTOMATISK af alle andre endpoints - backend skal implementere dette.",
-        why: "Kritisk for compliance (GDPR, revisionsspor), sikkerhedsovervågning, fejlfinding, og performance tracking. Hver handling i systemet skal kunne spores tilbage til bruger, tidspunkt og kontekst.",
+        description: "Log en handling til systemlog. VIGTIGT: Backend tilføjer AUTOMATISK ekstra felter (user, ipAddress, userAgent, requestId, responseStatus, durationMs, createdAt) til det der sendes.",
+        why: "GET /api/logs returnerer MERE data end det der sendes i POST, fordi systemet automatisk beriger loggen med kontekst information fra HTTP request, session, og server.",
         requestBody: {
+          // DETTE SENDES FRA ENDPOINT:
+          whatYouSend: {
+            actionType: "request_status_changed",
+            targetEntity: "request",
+            targetId: "REQ3042",
+            actionDetails: {
+              previousStatus: "Sample",
+              newStatus: "Offer"
+            },
+            oldValues: { status: "Sample" },
+            newValues: { status: "Offer" }
+          },
+          // DETTE TILFØJES AUTOMATISK AF BACKEND:
+          whatBackendAddsAutomatically: {
+            id: 12345,  // Auto-generated
+            user: {  // Fra session/JWT token
+              id: "550e8400-e29b-41d4-a716-446655440000",
+              name: "Casper Pedersen",
+              email: "casper@b2bgroup.dk"
+            },
+            employee: {  // Fra employee table lookup
+              id: 8,
+              name: "Casper Pedersen",
+              department: "Management"
+            },
+            ipAddress: "192.168.1.100",  // Fra HTTP request
+            userAgent: "Mozilla/5.0...",  // Fra HTTP headers
+            requestId: "req-abc123",  // Fra request tracking
+            responseStatus: 200,  // Fra HTTP response
+            durationMs: 145,  // Fra timing measurement
+            createdAt: "2025-09-05T14:30:00Z"  // Fra server timestamp
+          },
+          // HER ER FLERE EKSEMPLER:
           // EKSEMPEL 1: Status ændring (fra PUT /api/requests/{id}/status)
           example1_statusChange: {
             actionType: "request_status_changed",
@@ -1361,40 +1394,43 @@ const endpointSections: EndpointSection[] = [
           success: true,
           data: [
             {
-              id: 12345,
+              // DISSE FELTER KOMMER FRA POST REQUEST:
               actionType: {
-                name: "request_status_changed",
-                category: "sales",
-                description: "Salgsforespørgsel status ændret",
-                severity: "info",
-                isAdminOnly: false
+                name: "request_status_changed",  // Fra POST body
+                category: "sales",  // Opslået fra log_action_types tabel
+                description: "Salgsforespørgsel status ændret",  // Fra log_action_types
+                severity: "info",  // Fra log_action_types
+                isAdminOnly: false  // Fra log_action_types
               },
-              user: {
-                id: "550e8400-e29b-41d4-a716-446655440000",
-                name: "Casper Pedersen",
-                email: "casper@b2bgroup.dk"
-              },
-              employee: {
-                id: 8,
-                name: "Casper Pedersen",
-                department: "Management"
-              },
-              targetEntity: "request",
-              targetId: 1234,
-              actionDetails: {
+              targetEntity: "request",  // Fra POST body
+              targetId: 1234,  // Fra POST body
+              actionDetails: {  // Fra POST body
                 previousStatus: "Sample",
                 newStatus: "Offer",
                 changedBy: "drag_drop"
               },
-              oldValues: { status: "Sample" },
-              newValues: { status: "Offer" },
-              ipAddress: "192.168.1.100",
-              userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)...",
-              requestId: "req-abc123",
-              responseStatus: 200,
-              errorMessage: null,
-              durationMs: 145,
-              createdAt: "2025-09-05T14:30:00Z"
+              oldValues: { status: "Sample" },  // Fra POST body
+              newValues: { status: "Offer" },  // Fra POST body
+
+              // DISSE FELTER TILFØJES AUTOMATISK AF BACKEND:
+              id: 12345,  // Database auto-increment
+              user: {  // Fra JWT token/session
+                id: "550e8400-e29b-41d4-a716-446655440000",
+                name: "Casper Pedersen",
+                email: "casper@b2bgroup.dk"
+              },
+              employee: {  // Opslået fra employees tabel via user email
+                id: 8,
+                name: "Casper Pedersen",
+                department: "Management"
+              },
+              ipAddress: "192.168.1.100",  // Fra request.ip
+              userAgent: "Mozilla/5.0...",  // Fra request.headers['user-agent']
+              requestId: "req-abc123",  // Fra request tracking middleware
+              responseStatus: 200,  // Fra response.statusCode
+              errorMessage: null,  // Fra catch block hvis fejl
+              durationMs: 145,  // Fra Date.now() difference
+              createdAt: "2025-09-05T14:30:00Z"  // Fra new Date()
             }
           ],
           pagination: {
