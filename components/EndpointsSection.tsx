@@ -1249,13 +1249,14 @@ const endpointSections: EndpointSection[] = [
     ]
   },
   {
-    title: "System Logging", 
+    title: "System Logging",
     description: "Logging af alle handlinger i systemet for audit og sikkerhed",
     endpoints: [
       {
         method: "POST",
         path: "/api/logs",
         description: "Log en handling til systemlog. Alle API kald skal logges for audit trail, sikkerhed og fejlfinding. Dette endpoint kaldes automatisk af alle andre endpoints.",
+        why: "Kritisk for compliance (GDPR, revisionsspor), sikkerhedsovervågning, fejlfinding, og performance tracking. Hver handling i systemet skal kunne spores tilbage til bruger, tidspunkt og kontekst.",
         requestBody: {
           actionType: "request_status_changed",  // Name from log_action_types table
           targetEntity: "request",
@@ -1343,30 +1344,84 @@ const endpointSections: EndpointSection[] = [
         path: "/api/logs/action-types",
         description: "Hent alle mulige handlingstyper. Frontend skal kunne vise filter muligheder og forstå log typer.",
         queryParams: {
-          includeAdminOnly: "Include admin-only action types (admin users only, default false)"
+          includeAdminOnly: "Include admin-only action types (admin users only, default false)",
+          category: "Filter by category (auth, hr, sales, orders, finance, admin)",
+          isActive: "Filter only active action types (default true)"
         },
         responseBody: {
           success: true,
           data: [
-            {
-              id: 1,
-              name: "user_login",
-              category: "auth",
-              description: "Bruger logger ind",
-              severity: "info",
-              isAdminOnly: false,
-              isActive: true
-            },
-            {
-              id: 2,
-              name: "request_status_changed",
-              category: "sales",
-              description: "Salgsforespørgsel status ændret",
-              severity: "info",
-              isAdminOnly: false,
-              isActive: true
-            }
-            // ... more action types
+            // Authentication & User Management
+            { id: 1, name: "user_login", category: "auth", description: "Bruger logger ind", severity: "info", isAdminOnly: false },
+            { id: 2, name: "user_logout", category: "auth", description: "Bruger logger ud", severity: "info", isAdminOnly: false },
+            { id: 3, name: "login_failed", category: "auth", description: "Fejlet login forsøg", severity: "warning", isAdminOnly: false },
+            { id: 4, name: "token_refresh", category: "auth", description: "Access token fornyet", severity: "info", isAdminOnly: false },
+            { id: 5, name: "password_reset_requested", category: "auth", description: "Password reset anmodet", severity: "info", isAdminOnly: false },
+            { id: 6, name: "user_features_updated", category: "auth", description: "Bruger features opdateret", severity: "info", isAdminOnly: true },
+            { id: 7, name: "user_settings_updated", category: "auth", description: "Bruger indstillinger ændret", severity: "info", isAdminOnly: false },
+
+            // HR Module - Employees & Locations
+            { id: 10, name: "employee_created", category: "hr", description: "Medarbejder oprettet", severity: "info", isAdminOnly: true },
+            { id: 11, name: "employee_updated", category: "hr", description: "Medarbejder opdateret", severity: "info", isAdminOnly: true },
+            { id: 12, name: "employee_deactivated", category: "hr", description: "Medarbejder deaktiveret", severity: "warning", isAdminOnly: true },
+            { id: 13, name: "location_created", category: "hr", description: "Lokation oprettet", severity: "info", isAdminOnly: true },
+            { id: 14, name: "location_updated", category: "hr", description: "Lokation opdateret", severity: "info", isAdminOnly: true },
+            { id: 15, name: "location_deactivated", category: "hr", description: "Lokation deaktiveret", severity: "warning", isAdminOnly: true },
+
+            // HR Module - Shifts & Scheduling
+            { id: 20, name: "shift_requested", category: "hr", description: "Vagt/fri anmodet", severity: "info", isAdminOnly: false },
+            { id: 21, name: "shift_approved", category: "hr", description: "Vagt godkendt", severity: "info", isAdminOnly: false },
+            { id: 22, name: "shift_rejected", category: "hr", description: "Vagt afvist", severity: "info", isAdminOnly: false },
+            { id: 23, name: "shift_cancelled", category: "hr", description: "Vagt annulleret", severity: "info", isAdminOnly: false },
+            { id: 24, name: "week_schedule_applied", category: "hr", description: "Ugeplan anvendt", severity: "info", isAdminOnly: true },
+            { id: 25, name: "week_schedule_deleted", category: "hr", description: "Ugeplan slettet", severity: "warning", isAdminOnly: true },
+            { id: 26, name: "schedule_template_updated", category: "hr", description: "Vagtskabelon opdateret", severity: "info", isAdminOnly: false },
+
+            // HR Module - Events
+            { id: 30, name: "event_created", category: "hr", description: "Begivenhed oprettet", severity: "info", isAdminOnly: false },
+            { id: 31, name: "event_updated", category: "hr", description: "Begivenhed opdateret", severity: "info", isAdminOnly: false },
+            { id: 32, name: "event_cancelled", category: "hr", description: "Begivenhed aflyst", severity: "info", isAdminOnly: false },
+            { id: 33, name: "event_attendee_added", category: "hr", description: "Deltager tilføjet", severity: "info", isAdminOnly: false },
+            { id: 34, name: "event_attendee_removed", category: "hr", description: "Deltager fjernet", severity: "info", isAdminOnly: false },
+
+            // Sales Module - Requests
+            { id: 40, name: "request_created", category: "sales", description: "Salgsforespørgsel oprettet", severity: "info", isAdminOnly: false },
+            { id: 41, name: "request_status_changed", category: "sales", description: "Salgsforespørgsel status ændret", severity: "info", isAdminOnly: false },
+            { id: 42, name: "request_assigned", category: "sales", description: "Forespørgsel tildelt sælger", severity: "info", isAdminOnly: false },
+            { id: 43, name: "request_priority_changed", category: "sales", description: "Prioritet ændret", severity: "info", isAdminOnly: false },
+            { id: 44, name: "request_deadline_changed", category: "sales", description: "Deadline ændret", severity: "info", isAdminOnly: false },
+            { id: 45, name: "request_deleted", category: "sales", description: "Forespørgsel slettet", severity: "warning", isAdminOnly: true },
+
+            // Orders Module
+            { id: 50, name: "order_created", category: "orders", description: "Ordre oprettet", severity: "info", isAdminOnly: false },
+            { id: 51, name: "order_status_changed", category: "orders", description: "Ordre status ændret", severity: "info", isAdminOnly: false },
+            { id: 52, name: "order_approved", category: "orders", description: "Ordre godkendt", severity: "info", isAdminOnly: false },
+            { id: 53, name: "order_shipped", category: "orders", description: "Ordre afsendt", severity: "info", isAdminOnly: false },
+            { id: 54, name: "order_delivered", category: "orders", description: "Ordre leveret", severity: "info", isAdminOnly: false },
+            { id: 55, name: "order_cancelled", category: "orders", description: "Ordre annulleret", severity: "warning", isAdminOnly: false },
+            { id: 56, name: "order_complaint", category: "orders", description: "Ordre reklamation", severity: "warning", isAdminOnly: false },
+
+            // Finance Module
+            { id: 60, name: "invoice_created", category: "finance", description: "Faktura oprettet", severity: "info", isAdminOnly: false },
+            { id: 61, name: "payment_received", category: "finance", description: "Betaling modtaget", severity: "info", isAdminOnly: false },
+            { id: 62, name: "payment_overdue", category: "finance", description: "Betaling forfalden", severity: "warning", isAdminOnly: false },
+            { id: 63, name: "refund_issued", category: "finance", description: "Refundering udstedt", severity: "info", isAdminOnly: true },
+            { id: 64, name: "credit_note_created", category: "finance", description: "Kreditnota oprettet", severity: "info", isAdminOnly: true },
+
+            // System & Admin
+            { id: 70, name: "config_updated", category: "admin", description: "System konfiguration ændret", severity: "warning", isAdminOnly: true },
+            { id: 71, name: "bulk_import", category: "admin", description: "Bulk data import", severity: "info", isAdminOnly: true },
+            { id: 72, name: "bulk_export", category: "admin", description: "Bulk data eksport", severity: "info", isAdminOnly: true },
+            { id: 73, name: "bulk_update", category: "admin", description: "Bulk opdatering", severity: "info", isAdminOnly: true },
+            { id: 74, name: "maintenance_mode_enabled", category: "admin", description: "Vedligeholdelse aktiveret", severity: "critical", isAdminOnly: true },
+            { id: 75, name: "backup_created", category: "admin", description: "Backup oprettet", severity: "info", isAdminOnly: true },
+            { id: 76, name: "system_error", category: "admin", description: "System fejl", severity: "error", isAdminOnly: true },
+
+            // Data Access & Views
+            { id: 80, name: "data_view", category: "data", description: "Data vist", severity: "info", isAdminOnly: false },
+            { id: 81, name: "data_search", category: "data", description: "Data søgning", severity: "info", isAdminOnly: false },
+            { id: 82, name: "data_export", category: "data", description: "Data eksporteret", severity: "info", isAdminOnly: false },
+            { id: 83, name: "report_generated", category: "data", description: "Rapport genereret", severity: "info", isAdminOnly: false }
           ]
         }
       },
@@ -1397,6 +1452,389 @@ const endpointSections: EndpointSection[] = [
             },
             errorRate: 0.6,
             averageResponseTime: 234 // milliseconds
+          }
+        }
+      }
+    ]
+  },
+  {
+    title: "System Logging - Advanced Features",
+    description: "Avancerede logging funktioner, eksporter, webhooks og compliance",
+    endpoints: [
+      {
+        method: "POST",
+        path: "/api/logs/automatic-examples",
+        description: "EKSEMPLER: Hvordan andre endpoints automatisk trigger logging. Dette er ikke et rigtigt endpoint, men viser hvordan logging integreres.",
+        why: "Viser backend udviklere præcis hvordan hver type API kald skal logge automatisk. Sikrer konsistent logging på tværs af alle moduler.",
+        requestBody: {
+          example1: {
+            userAction: "PUT /api/requests/REQ3042/status",
+            requestPayload: { newStatus: "Sample", oldStatus: "Request" },
+            automaticLog: {
+              actionType: "request_status_changed",
+              targetEntity: "request",
+              targetId: "REQ3042",
+              actionDetails: {
+                previousStatus: "Request",
+                newStatus: "Sample",
+                changedBy: "drag_drop",
+                userInterface: "kanban_board"
+              },
+              oldValues: { status: "Request", updatedAt: "2025-09-01T10:00:00Z" },
+              newValues: { status: "Sample", updatedAt: "2025-09-05T14:30:00Z" }
+            }
+          },
+          example2: {
+            userAction: "POST /api/hr/shifts/102/approve",
+            requestPayload: { action: "approve", comment: "Godkendt" },
+            automaticLog: {
+              actionType: "shift_approved",
+              targetEntity: "shift",
+              targetId: 102,
+              actionDetails: {
+                approvedBy: 6,
+                comment: "Godkendt",
+                employeeId: 1,
+                shiftDate: "2025-09-10"
+              },
+              oldValues: { status: "requested" },
+              newValues: { status: "approved", approvedBy: 6, approvedAt: "2025-09-05T10:30:00Z" }
+            }
+          },
+          example3: {
+            userAction: "POST /api/auth/login FAILED",
+            requestPayload: { username: "casper", password: "wrong" },
+            automaticLog: {
+              actionType: "login_failed",
+              targetEntity: "user",
+              targetId: null,
+              actionDetails: {
+                username: "casper",
+                reason: "invalid_credentials",
+                attemptNumber: 3,
+                ipAddress: "192.168.1.100"
+              },
+              severity: "warning",
+              errorMessage: "Invalid username or password"
+            }
+          },
+          example4: {
+            userAction: "POST /api/orders FAILED",
+            requestPayload: { customerId: 1796, items: [{ productId: "P123", quantity: 100 }] },
+            automaticLog: {
+              actionType: "order_creation_failed",
+              targetEntity: "order",
+              targetId: null,
+              actionDetails: {
+                customerId: 1796,
+                reason: "insufficient_inventory",
+                attemptedItems: [
+                  { productId: "P123", requested: 100, available: 45 }
+                ]
+              },
+              severity: "error",
+              errorMessage: "Cannot create order: Insufficient inventory for product P123",
+              stackTrace: "at OrderService.create() line 234..."
+            }
+          },
+          example5: {
+            userAction: "POST /api/logs/bulk",
+            requestPayload: { operation: "cancel_old_requests", affectedCount: 23 },
+            automaticLog: {
+              actionType: "bulk_status_update",
+              targetEntity: "request",
+              actionDetails: {
+                operation: "cancel_old_requests",
+                criteria: "deadline < '2025-06-01' AND status = 'Pending B2B'",
+                affectedCount: 23,
+                affectedIds: ["REQ2998", "REQ2999", "REQ3000"],
+                reason: "End of promotion period"
+              },
+              bulkChanges: [
+                {
+                  targetId: "REQ2998",
+                  oldValues: { status: "Pending B2B" },
+                  newValues: { status: "Cancelled" }
+                }
+              ]
+            }
+          }
+        },
+        responseBody: {
+          note: "Dette viser automatisk logging patterns - ikke et rigtigt endpoint"
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/logs/export",
+        description: "Eksporter logs til fil for offline analyse eller arkivering. Understøtter forskellige formater og kan filtreres som GET /api/logs.",
+        queryParams: {
+          format: "Export format: csv, json, pdf (default: csv)",
+          dateFrom: "Start date (ISO 8601)",
+          dateTo: "End date (ISO 8601)",
+          category: "Filter by category",
+          severity: "Filter by severity",
+          includeDetails: "Include full action details (default: false)",
+          compress: "Compress output with gzip (default: true for large exports)"
+        },
+        responseBody: {
+          success: true,
+          downloadUrl: "https://api.b2bgroup.dk/downloads/logs-export-2025-09-05.csv.gz",
+          expiresAt: "2025-09-06T14:30:00Z",
+          metadata: {
+            format: "csv",
+            compressed: true,
+            recordCount: 5234,
+            fileSizeBytes: 1048576,
+            dateRange: {
+              from: "2025-09-01T00:00:00Z",
+              to: "2025-09-05T23:59:59Z"
+            }
+          }
+        }
+      },
+      {
+        method: "POST",
+        path: "/api/logs/webhooks",
+        description: "Konfigurer webhook for real-time notifikationer om kritiske events. Bruges til at integrere med monitoring systemer som Slack, Teams, eller PagerDuty.",
+        requestBody: {
+          name: "Critical Error Alert",
+          url: "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXX",
+          events: ["login_failed", "system_error", "order_creation_failed"],
+          filters: {
+            severity: ["error", "critical"],
+            category: ["auth", "admin"]
+          },
+          retryPolicy: {
+            maxAttempts: 3,
+            backoffSeconds: [1, 5, 30]
+          },
+          isActive: true
+        },
+        responseBody: {
+          success: true,
+          webhookId: "webhook-123",
+          message: "Webhook configured successfully",
+          testUrl: "/api/logs/webhooks/webhook-123/test"
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/logs/webhooks",
+        description: "List alle konfigurerede webhooks",
+        responseBody: {
+          success: true,
+          data: [
+            {
+              id: "webhook-123",
+              name: "Critical Error Alert",
+              url: "https://hooks.slack.com/...",
+              events: ["login_failed", "system_error"],
+              filters: { severity: ["error", "critical"] },
+              isActive: true,
+              lastTriggered: "2025-09-05T13:45:00Z",
+              triggeredCount: 12
+            }
+          ]
+        }
+      },
+      {
+        method: "DELETE",
+        path: "/api/logs/webhooks/{webhookId}",
+        description: "Slet webhook konfiguration",
+        responseBody: {
+          success: true,
+          message: "Webhook deleted successfully"
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/logs/audit-trail/{entity}/{id}",
+        description: "Hent komplet audit trail for en specifik entitet. Viser alle handlinger relateret til f.eks. en ordre eller anmodning.",
+        responseBody: {
+          success: true,
+          entity: "request",
+          entityId: "REQ3042",
+          timeline: [
+            {
+              timestamp: "2025-06-18T09:00:00Z",
+              action: "request_created",
+              user: "Brian Frisch",
+              details: {
+                initialStatus: "Request",
+                customer: "Busy ApS",
+                value: 15000
+              }
+            },
+            {
+              timestamp: "2025-06-19T14:00:00Z",
+              action: "request_status_changed",
+              user: "Casper Andersen",
+              details: {
+                from: "Request",
+                to: "Sample"
+              }
+            },
+            {
+              timestamp: "2025-06-20T08:00:00Z",
+              action: "request_priority_changed",
+              user: "Casper Andersen",
+              details: {
+                from: "normal",
+                to: "*",
+                reason: "Customer escalation"
+              }
+            },
+            {
+              timestamp: "2025-06-22T10:30:00Z",
+              action: "request_status_changed",
+              user: "Casper Andersen",
+              details: {
+                from: "Sample",
+                to: "Offer"
+              }
+            }
+          ],
+          summary: {
+            totalActions: 4,
+            uniqueUsers: 2,
+            durationDays: 4,
+            currentStatus: "Offer"
+          }
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/logs/compliance-report",
+        description: "Generer compliance rapport for GDPR, revision eller sikkerhedsaudit.",
+        queryParams: {
+          reportType: "Type of report: gdpr_user_data, security_audit, access_log, activity_summary",
+          userId: "User ID (required for GDPR reports)",
+          dateFrom: "Start date",
+          dateTo: "End date",
+          format: "Output format: pdf, json (default: pdf)"
+        },
+        responseBody: {
+          success: true,
+          reportId: "report-abc123",
+          reportType: "gdpr_user_data",
+          generatedAt: "2025-09-05T14:30:00Z",
+          downloadUrl: "https://api.b2bgroup.dk/reports/gdpr-user-550e8400.pdf",
+          summary: {
+            userId: "550e8400-e29b-41d4-a716-446655440000",
+            userName: "Casper Andersen",
+            totalActions: 342,
+            dataCategories: [
+              { category: "auth", count: 45 },
+              { category: "sales", count: 156 },
+              { category: "orders", count: 89 },
+              { category: "hr", count: 52 }
+            ],
+            firstActivity: "2025-01-15T08:00:00Z",
+            lastActivity: "2025-09-05T13:45:00Z"
+          }
+        }
+      },
+      {
+        method: "PUT",
+        path: "/api/logs/retention-policy",
+        description: "Opdater log retention politik for forskellige kategorier.",
+        requestBody: {
+          defaultRetentionDays: 90,
+          policies: [
+            {
+              category: "auth",
+              retentionDays: 180,
+              reason: "Security compliance"
+            },
+            {
+              category: "finance",
+              retentionDays: 2555,
+              reason: "7 years for tax compliance"
+            },
+            {
+              severity: "critical",
+              retentionDays: 365,
+              reason: "Critical events kept for 1 year"
+            },
+            {
+              category: "data",
+              actionType: "data_view",
+              retentionDays: 7,
+              reason: "High volume, low importance"
+            }
+          ]
+        },
+        responseBody: {
+          success: true,
+          message: "Retention policy updated successfully",
+          affectedRecords: {
+            toBeDeleted: 12456,
+            toBeRetained: 98234
+          }
+        }
+      },
+      {
+        method: "POST",
+        path: "/api/logs/bulk",
+        description: "Log bulk operationer der påvirker flere entiteter samtidig.",
+        requestBody: {
+          actionType: "bulk_status_update",
+          targetEntity: "request",
+          actionDetails: {
+            operation: "cancel_old_requests",
+            criteria: "deadline < '2025-06-01' AND status = 'Pending B2B'",
+            affectedCount: 23,
+            affectedIds: ["REQ2998", "REQ2999", "REQ3000"],
+            reason: "End of promotion period"
+          },
+          bulkChanges: [
+            {
+              targetId: "REQ2998",
+              oldValues: { status: "Pending B2B" },
+              newValues: { status: "Cancelled" }
+            },
+            {
+              targetId: "REQ2999",
+              oldValues: { status: "Pending B2B" },
+              newValues: { status: "Cancelled" }
+            }
+          ]
+        },
+        responseBody: {
+          success: true,
+          logIds: ["log-12345", "log-12346", "log-12347"],
+          message: "Bulk operation logged successfully"
+        }
+      },
+      {
+        method: "GET",
+        path: "/api/logs/health",
+        description: "System health check baseret på logs - viser fejlrater, response tider og system status.",
+        responseBody: {
+          success: true,
+          timestamp: "2025-09-05T14:30:00Z",
+          health: {
+            status: "healthy",
+            errorRate: 0.012,
+            warningRate: 0.045,
+            averageResponseTime: 234,
+            p95ResponseTime: 890,
+            p99ResponseTime: 1250,
+            activeUsers: 8,
+            requestsPerMinute: 45,
+            lastError: {
+              timestamp: "2025-09-05T13:45:00Z",
+              actionType: "order_creation_failed",
+              errorMessage: "Insufficient inventory"
+            },
+            componentHealth: {
+              auth: { status: "healthy", errorRate: 0.001 },
+              hr: { status: "healthy", errorRate: 0.008 },
+              sales: { status: "healthy", errorRate: 0.015 },
+              orders: { status: "degraded", errorRate: 0.032, issue: "High error rate in order processing" },
+              finance: { status: "healthy", errorRate: 0.005 }
+            }
           }
         }
       }
